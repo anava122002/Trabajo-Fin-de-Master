@@ -61,7 +61,7 @@ def buscar_editorial(id_editorial, nombre_editorial, pag_inicio, pag_fin):
             print("Página 10 y más...")
 
         driver.get(url)
-        time.sleep(2)
+        time.sleep(1)
 
         soup = BeautifulSoup(driver.page_source, "html.parser")
         elementos = soup.select("h2 a")
@@ -97,7 +97,7 @@ def buscar_editorial(id_editorial, nombre_editorial, pag_inicio, pag_fin):
             })
 
         num_pagina += 1
-        time.sleep(2)
+        time.sleep(0.5)
 
     return libros
 
@@ -128,13 +128,13 @@ def buscar_editorial_grande(id_editorial, nombre_editorial, anio_inicio, anio_fi
         num_pagina = 1
 
         while True:
-            url = f"https://www.todostuslibros.com/editoriales/{id_editorial}/catalogo?anio={anio}&page={num_pagina}"
+            url = f"https://www.todostuslibros.com/editoriales/{id_editorial}/catalogo?anios={anio}&page={num_pagina}"
             driver.get(url)
-            time.sleep(2)
+            time.sleep(1)
 
             soup = BeautifulSoup(driver.page_source, "html.parser")
             elementos = soup.select("h2 a")
-
+            
             # Si no hay libros, este año ya no tiene más páginas
             if not elementos:
                 print(f"Sin más resultados en {anio}, página {num_pagina}.")
@@ -164,7 +164,7 @@ def buscar_editorial_grande(id_editorial, nombre_editorial, anio_inicio, anio_fi
                 })
 
             num_pagina += 1
-            time.sleep(2)
+            time.sleep(0.5)
 
     return libros
 
@@ -302,24 +302,22 @@ def scrapear_editorial(id_editorial, nombre_editorial, inicio, fin, es_grande):
 
         lista_libros.append(ficha)
 
-    # Fase 3: guardar CSV
+    # Fase 3: guardar JSON
     os.makedirs("data", exist_ok=True)
-    ruta_csv = f"../data/catalogos/catalogo_{nombre_editorial.lower()}.csv"
+    ruta_json = f"data/catalogos/catalogo_{nombre_editorial.lower()}.json"
     campos = lista_libros[0].keys()
 
-    with open(ruta_csv, "w", newline="", encoding="utf-8") as f:
-        escritor = csv.DictWriter(f, fieldnames=campos)
-        escritor.writeheader()
-        escritor.writerows(lista_libros)
+    with open(ruta_json, "w", encoding="utf-8") as f:
+        json.dump(lista_libros, f, ensure_ascii=False, indent=2)
 
-    print(f"✓ {len(lista_libros)} fichas guardadas en {ruta_csv}.")
+    print(f"✓ {len(lista_libros)} fichas guardadas en {ruta_json}.")
 
 
 # ======================================================================================
 # CONTROL DE FLUJO INTERACTIVO
 # ======================================================================================
 
-def control_flujo(ruta_editoriales="../data/json/editoriales.json", ruta_estado="../data/json/estado.json"):
+def control_flujo(ruta_editoriales="data/json/editoriales.json", ruta_estado="data/json/estado.json"):
     """
     Función principal que gestiona el flujo interactivo del scraping.
 
@@ -384,7 +382,7 @@ def control_flujo(ruta_editoriales="../data/json/editoriales.json", ruta_estado=
             # Determinar punto de inicio (desde el principio o desde donde se dejó)
             if nombre in estado:
                 ultimo_guardado = estado[nombre]["ultimo"]
-                inicio_sugerido = ultimo_guardado + 1  # retomamos desde el último guardado
+                inicio_sugerido = ultimo_guardado+1 # retomamos desde el último guardado
                 msg = f"{nombre}: proceso iniciado. Último guardado en {ultimo_guardado}. ¿Continuar? [Y/N]: "
             else:
                 inicio_sugerido = info["intervalo"][0]

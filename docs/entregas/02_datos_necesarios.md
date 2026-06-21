@@ -7,7 +7,7 @@ condiciona la experiencia de lectura tanto para bien si se adapta a nuestras nec
 
 El objetivo es crear un modelo de recomendación que, en base a una serie de necesidades referidas por el usuario, recomiende la edición de entre las registradas en la base de datos que más se ajuste a lo pedido. Estas necesidades pueden ser características físicas del libro como el tamaño, peso o tipo de cubierta, del contenido en el caso de estudios introductorios o anotaciones, o editoriales, de modo que se combinarán los propios metadatos de cada edición con información sobre la calidad de su editorial, sello, autor y traductor en caso de tenerlo.
 
-El modelo se presentará comouna web con un chatbot que actuará como una interfaz conversacional que recogerá y transformará las necesidades del usuario para seleccionar una recomendación. Esta será devuelta al usuario mostrándole su título, autor, editorial y un breve resumen de cómo encaja con lo que ha pedido. La inspiración viene de [Gnooks](https://www.gnooks.com/faves.php) (y otras páginas del mismo autor).
+El modelo se presentará como una web con un chatbot que actuará como una interfaz conversacional que recogerá y transformará las necesidades del usuario para seleccionar una recomendación. Esta será devuelta al usuario mostrándole su título, autor, editorial y un breve resumen de cómo encaja con lo que ha pedido. La inspiración viene de [Gnooks](https://www.gnooks.com/faves.php) (y otras páginas del mismo autor).
 
 
 ## 2. Datos Necesarios

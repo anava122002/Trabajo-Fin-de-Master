@@ -179,11 +179,40 @@
         "grande": true,
         "intervalo": [1985, 2026]
     },
-    "Errata Natural": {
-        "id": "capitan-swing-libros_68588",
-        "total_libros": 17796,
+    "Errata Naturae": {
+        "id": "errata-naturae-editores_13317",
+        "total_libros": 446,
+        "grande": false,
+        "intervalo": [1, 9]
+    },
+    "Tusquets Editores": {
+        "id": "tusquets-editores-s-a_99876",
+        "total_libros": 3524,
+        "grande": false,
+        "intervalo": [1, 71]
+    },
+    "Maxi Tusquets": {
+        "id": "maxi-tusquets_197850",
+        "total_libros": 624,
+        "grande": false,
+        "intervalo": [1, 13]
+    },
+    "Ediciones Akal": {
+        "id": "ediciones-akal_64555",
+        "total_libros": 5750,
+        "grande": false,
+        "intervalo": [1, 115]
+    },
+    "Gredos": {
+        "id": "gredos_74698",
+        "total_libros": 3326,
+        "grande": false,
+        "intervalo": [1, 67]
+    },
+    "Alianza Editorial": {
+        "id": "alianza-editorial_64773",
+        "total_libros": 10008,
         "grande": true,
-        "intervalo": [1985, 2026]
+        "intervalo": [1920, 2026]
     }
-
 }

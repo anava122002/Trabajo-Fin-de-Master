@@ -3,13 +3,13 @@
     "ultimo": 2026
   },
   "Espasa": {
-    "ultimo": 2005
+    "ultimo": 2026
   },
   "Seix Barral": {
     "ultimo": 74
   },
   "Destino": {
-    "ultimo": 30
+    "ultimo": 60
   },
   "Booket": {
     "ultimo": 52
@@ -18,6 +18,12 @@
     "ultimo": 1
   },
   "Alfaguara": {
+    "ultimo": 133
+  },
+  "Plaza & Janes": {
+    "ultimo": 1950
+  },
+  "Debolsillo": {
     "ultimo": 30
   }
 }

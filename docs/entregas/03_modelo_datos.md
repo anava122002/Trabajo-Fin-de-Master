@@ -33,7 +33,7 @@ data/
 |   |   └── catalogo_editorial.json     (uno por editorial)
 |   └── spi/
 |       ├── clasificacion_general.csv
-|       ├── especialización_tematica.csv
+|       ├── clasificacion_tematica.csv      (uno por temática)
 |       └── seleccion_originales.csv
 ├── silver/
 |   ├── silver_libros.parquet
@@ -55,8 +55,7 @@ El resultado final de la limpieza y transformación de datos será un único arc
 * **anio_publicacion:** año de publicación. 
 * **temas:** lista de los temas principales relacionados con el libro. Los temas serán extraídos de OpenLibrary y se pasarán por un LLM que agrupe aquellos que son similares para obtener categorías más robustas, descriptivas y fáciles de normalizar.
 * **editorial:** nombre de la editorial codificado.
-* **posicion_ed:** posición de la editorial en la clasificación general del SPI. 
-* **esp_tematica:** temas usualmente tratados por la editorial codificados. 
+* **ICEE:** posición de la editorial en la clasificación general del SPI.
 * **formato:** formato de edición (rústica o cartoné) codificados. 
 * **dimensiones:** altura, ancho y peso. 
 * **valoracion:** puntuación (de 1 a 5) dada por los usuarios en OpenLibrary (debería complementarse con el número de personas que han puntuado o el número de votos que tiene cada estrella).
@@ -77,12 +76,18 @@ Una vez transformados los catálogos de cada editorial en una tabla, ésta estar
 
 ## 6. Diccionario de Datos Inicial
 
-|   Campo    | Descripción | Tipo de Dato | Fuente | Obligatorio | Observaciones |
-|   :---:    |    :---:    |    :---:     |  :---: |    :---:    |   :---:       |
-|   titulo   | 
-|   titulo   |
-|   titulo   |
-|   titulo   |
-|   titulo   |
-|   titulo   |
-|   titulo   |            
+|   Campo         |              Descripción                 | Tipo de Dato |                     Fuente                                  | Obligatorio | Observaciones |
+|   :---          |                 :---:                    |    :---:     |                     :---:                                   |    :---:    |   :---:       |
+|   **titulo**    |                                          |     str      | [Todos tus Libros](https://www.todostuslibros.com/)         | Sí          |
+|    **autor**    |                                          |     str      | [Todos tus Libros](https://www.todostuslibros.com/)         | Sí          |
+| **editorial**   |                                          |     int      | [Todos tus Libros](https://www.todostuslibros.com/)         | Sí          |
+|   **formato**   |                                          |     int      | [Todos tus Libros](https://www.todostuslibros.com/)         | Sí          |
+|**dimensiones**  |                                          |    float     | [OpenLibrary](https://openlibrary.org/)                     | Sí          |
+|   **peso**      |                                          |    float     | [OpenLibrary](https://openlibrary.org/)                     | No          |
+| **rating_avg**  |                                          |    float     | [OpenLibrary](https://openlibrary.org/)                     | Sí          |
+|**rating_count** |                                          |     int      | [OpenLibrary](https://openlibrary.org/)                     | No          |  
+| **icee_general**|                                          |     int      |[SPI (Scholarly Publishers Indicators)](https://spi.csic.es/)| Sí          |
+|   **icee_cat**  |                                          |     int      |[SPI (Scholarly Publishers Indicators)](https://spi.csic.es/)| No          | 
+|   **precio**    |                                          |    float     | [Todos tus Libros](https://www.todostuslibros.com/)         | Sí          |
+|**cat_principal**|                                          |     int      |[SPI (Scholarly Publishers Indicators)](https://spi.csic.es/)| Sí          |  
+|   **subcat**    |                                          |     int      | [OpenLibrary](https://openlibrary.org/)                     | No          |        

@@ -307,8 +307,19 @@ def scrapear_editorial(id_editorial, nombre_editorial, inicio, fin, es_grande):
     ruta_json = f"data/catalogos/catalogo_{nombre_editorial.lower()}.json"
     campos = lista_libros[0].keys()
 
+    # Revisión del catálogo
+    if os.path.exists(ruta_json):
+        with open(ruta_json, "r", encoding="utf-8") as f:
+            libros_existentes = json.load(f)
+    else:
+        libros_existentes = []
+
+    # Añadir nuevos libros al final
+    libros_existentes.extend(lista_libros)
+
+    # Guardar el resultado completo
     with open(ruta_json, "w", encoding="utf-8") as f:
-        json.dump(lista_libros, f, ensure_ascii=False, indent=2)
+        json.dump(libros_existentes, f, ensure_ascii=False, indent=2)
 
     print(f"✓ {len(lista_libros)} fichas guardadas en {ruta_json}.")
 
@@ -427,3 +438,4 @@ def control_flujo(ruta_editoriales="data/json/editoriales.json", ruta_estado="da
         driver.quit()
         print("\nNavegador cerrado.")
 
+        

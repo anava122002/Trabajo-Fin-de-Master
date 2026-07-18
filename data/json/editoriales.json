@@ -57,53 +57,11 @@
         "grande": false,
         "intervalo": [1, 162]
     },
-    "Lumen": {
-        "id": "lumen_74971",
-        "total_libros": 2637,
-        "grande": false,
-        "intervalo": [1, 53]
-    },
-    "Reservoir Books": {
-        "id": "reservoir-books_176736",
-        "total_libros": 510,
-        "grande": false,
-        "intervalo": [1, 11]
-    },
     "Grijalbo": {
         "id": "grijalbo_10251",
         "total_libros": 5548,
         "grande": false,
         "intervalo": [1, 111]
-    },
-    "HarperCollins": {
-        "id": "harpercollins_89689",
-        "total_libros": 1342,
-        "grande": false,
-        "intervalo": [1, 27]
-    },
-    "Harlequin Ibérica": {
-        "id": "harlequin-iberica-s-a_174747",
-        "total_libros": 27123,
-        "grande": true,
-        "intervalo": [1985, 2026]
-    },
-    "Harlequin": {
-        "id": "harlequin_114052",
-        "total_libros": 265,
-        "grande": false,
-        "intervalo": [1, 6]
-    },
-    "Devir Iberia": {
-        "id": "devir-iberia_194432",
-        "total_libros": 52,
-        "grande": false,
-        "intervalo": [1, 2]
-    },
-    "Ediciones Iberia": {
-        "id": "editorial-iberia-s-a_74764",
-        "total_libros": 308,
-        "grande": false,
-        "intervalo": [1, 7]
     },
     "Anagrama": {
         "id": "anagrama_89826",
@@ -126,72 +84,12 @@
         "intervalo": [1, 23],
         "nombre_spi": "Acantilado"
     },
-    "Impedimenta": {
-        "id": "impedimenta_79803",
-        "total_libros": 471,
-        "grande": false,
-        "intervalo": [1, 10]
-    },
     "Siruela": {
         "id": "siruela_174685",
         "total_libros": 2825,
         "grande": false,
         "intervalo": [1, 57],
         "nombre_spi": "Siruela"
-    },
-    "Ediciones La Uña Rota": {
-        "id": "ediciones-la-una-rota_156192",
-        "total_libros": 189,
-        "grande": false,
-        "intervalo": [1, 4]
-    },
-    "Punto Rojo S.L.": {
-        "id": "punto-rojo-libros-s-l_178669",
-        "total_libros": 4499,
-        "grande": false,
-        "intervalo": [1, 90]
-    },
-    "Punto Rojo Libros": {
-        "id": "punto-rojo-libros_175552",
-        "total_libros": 134,
-        "grande": false,
-        "intervalo": [1, 3]
-    },
-    "Blackie Books": {
-        "id": "blackie-books_68002",
-        "total_libros": 909,
-        "grande": false,
-        "intervalo": [1, 19]
-    },
-    "Libros del Asteroide": {
-        "id": "libros-del-asteroide-s-l-u_81623",
-        "total_libros": 414,
-        "grande": false,
-        "intervalo": [1, 9]
-    },
-    "Editorial Sexto Piso": {
-        "id": "editorial-sexto-piso_75460",
-        "total_libros": 576,
-        "grande": false,
-        "intervalo": [1, 12]
-    },
-    "Alpha Decay": {
-        "id": "ediciones-alpha-decay-s-a_143084",
-        "total_libros": 311,
-        "grande": false,
-        "intervalo": [1, 7]
-    },
-    "Capitán Swing": {
-        "id": "capitan-swing-libros_68588",
-        "total_libros": 17796,
-        "grande": true,
-        "intervalo": [1985, 2026]
-    },
-    "Errata Naturae": {
-        "id": "errata-naturae-editores_13317",
-        "total_libros": 446,
-        "grande": false,
-        "intervalo": [1, 9]
     },
     "Tusquets Editores": {
         "id": "tusquets-editores-s-a_99876",

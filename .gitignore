@@ -207,6 +207,6 @@ marimo/_lsp/
 __marimo__/
 
 # Data
-# data/catalogos/
-# data/prueba/
+data/catalogos/
+data/prueba/
 data/json/

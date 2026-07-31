@@ -304,7 +304,7 @@ def scrapear_editorial(id_editorial, nombre_editorial, inicio, fin, es_grande):
 
     # Fase 3: guardar JSON
     os.makedirs("data", exist_ok=True)
-    ruta_json = f"data/catalogos/catalogo_{nombre_editorial.lower()}.json"
+    ruta_json = f"data/bronze/catalogos/catalogo_{nombre_editorial.lower()}.json"
     campos = lista_libros[0].keys()
 
     # Revisión del catálogo

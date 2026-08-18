@@ -1,11 +1,9 @@
-# ======================================================================================
-# MERGE Y LIMPIEZA DE CATÁLOGOS
-# ======================================================================================
 import pandas as pd
 import numpy as np
-import pathlib as Path
-import json
+from pathlib import Path
+from datetime import datetime
 import re
+from src.constants import TRADUCTOR_EDITOR, OTROS_CONTRIBUIDORES, ILUSTRACIONES, ESCOLARES, CATEGORIAS, COLUMNAS_FINALES, CATEGORIAS, SUBCATEGORIAS, ENCUADERNACION, EDITORIALES, CATEGORIAS_SPI
 
 # ======================================================================================
 # CREACIÓN DEL DATAFRAME BASE
@@ -53,40 +51,6 @@ def moda(x):
 
     return x.mode().iloc[0]
 
-# Busca los nombres más repetidos en una serie de listas/columnas
-def contador_nombres(df, min_apariciones=5):
-
-    df = df.copy()
-
-    todos = pd.concat([
-        df["traductor_y_editor"].explode(),
-        df["otros_contribuidores"].explode()
-    ]).dropna()
-
-    frecuencia = todos.value_counts()
-
-    destacados = frecuencia[frecuencia >= min_apariciones].to_dict()
-
-    def calcular_score(personas):
-        return sum(
-            destacados.get(p, 0)
-            for p in personas
-        )
-
-    def colaboradores_destacados(personas):
-        return [
-            p
-            for p in personas
-            if p in destacados
-        ]
-
-    colaboradores = df["traductor_y_editor"]+ df["otros_contribuidores"]
-
-    df["score_colaboradores"] = colaboradores.apply(calcular_score)
-
-    df["colaboradores_destacados"] = colaboradores.apply(colaboradores_destacados)
-
-    return df
 
 # Extrae el número (precio, medida...) de un string
 def extraer_numero(x):
@@ -122,7 +86,7 @@ def normalizar_lista(valor):
         return []
 
     if isinstance(valor, str):
-        valor = valor.strip().capitalize()
+        valor = valor.strip().title()
         if valor == "":
             return []
 
@@ -137,7 +101,7 @@ def normalizar_lista(valor):
             if pd.isna(x):
                 continue
 
-            x = str(x).strip().capitalize()
+            x = str(x).strip().title()
 
             if x:
                 salida.append(x)
@@ -159,18 +123,17 @@ def normalizar_columnas_lista(df, columnas_listas):
 
 
 # Limpieza básica del DF (eliminar filas son datos obligatorios, duplicados, relleno de columnas nulas y mapeo)
-def limpieza_basica(df,dict_editoriales=None,dict_encuadernacion=None,):
-
-    df = df.copy()
+def limpieza_basica(df,dict_editoriales=None,dict_encuadernacion=ENCUADERNACION):
 
     # quitar duplicados por EAN
     df.drop_duplicates(subset="ean", inplace=True)
 
     # eliminar libros sin autor y sin categoría
     df = df.dropna(
-        subset=["autoria", "categorias"],
-        how="all",
+        subset=["ean", "titulo", "autoria", "categorias"],
+        how="any",
     )
+    df['ean'] = df['ean'].astype(str)
 
     # fecha
     df["fecha_publicacion"] = pd.to_datetime(
@@ -184,7 +147,7 @@ def limpieza_basica(df,dict_editoriales=None,dict_encuadernacion=None,):
 
     # ids editoriales
     if dict_editoriales is not None:
-        df["id_editorial"] = df["editorial"].map(dict_editoriales)
+        df["editorial"] = df["editorial"].map(dict_editoriales)
 
     # encuadernación
     if dict_encuadernacion is not None:
@@ -192,6 +155,17 @@ def limpieza_basica(df,dict_editoriales=None,dict_encuadernacion=None,):
 
     return df
 
+def normalizar_titulos(nombre:str):
+    articulos = {"El", "La", "Los", "Las", "Un", "Una", "Unos", "Unas"}
+
+    if "," in nombre:
+        titulo, articulo = map(str.strip, nombre.rsplit(",", 1))
+        if articulo in articulos:
+            nombre = f"{articulo} {titulo}"
+
+    nombre = nombre.strip().title()
+
+    return nombre 
 
 # =============================================================================
 # MERGE DE COLUMNAS Y FEATURES
@@ -227,64 +201,37 @@ def extraer_numeros(df):
 
     return df
 
-# Deetermina a qué grupo pertenece cada libro y crea columna con su portada
-def crear_columnas(df, ilustraciones, escolares):
-
-    df = df.copy()
-
-    # Flags
-    df["es_ilustrado"] = (
-        df[ilustraciones]
-        .apply(lambda col: col.str.len())
-        .sum(axis=1)
-        > 0
-    )
-
+def crear_marcadores(df, ilustraciones, escolares):
+    # Escolares
     escolar = (
         df[escolares]
         .apply(lambda col: col.str.len())
         .sum(axis=1)
         > 0
     )
+    df['es_escolar'] = escolar 
 
-    comentada = (
-        df["otros_contribuidores"]
-        .str.len()
+    # Ilustrada
+    ilustrada = (
+        df[ilustraciones]
+        .apply(lambda col: col.str.len())
+        .sum(axis=1)
         > 0
     )
+    df['es_ilustrada'] = ilustrada
 
-    adaptada = (
-        df["adaptacion"]
-        .str.len()
-        > 0
-    )
-
+    # Impresión bajo demanda
     ibd = (
         df["ibd"]
         .str.len()
         > 0
     )
+    df['es_ibd'] = ibd
+
+    return df
 
 
-    # Tipo edición
-    df["tipo_edicion"] = 'Edición normal'
-
-    df.loc[escolar, "tipo_edicion"] = "escolar"
-    df.loc[comentada & ~escolar,"tipo_edicion"] = "comentada"
-    df.loc[titulo.str.contains(r"\banotad\b",regex=True,na=False) & ~escolar,"presentacion"] = "comentada"
-    df.loc[adaptada,"tipo_edicion"] = "adaptada"
-    df.loc[ibd,"tipo_edicion"] = "ibd"
-
-    # Presentación
-    titulo = df["titulo"].fillna("").str.lower()
-
-    df["presentacion"] = "tomo único"
-    df.loc[titulo.str.contains(r"\bestuche\b",regex=True,na=False),"presentacion"] = "estuche"
-    df.loc[titulo.str.contains(r"obras?\s+completas?",regex=True,na=False),"presentacion"] = "obras completas"
-    df.loc[titulo.str.contains(r"\bpack\b",regex=True,na=False),"presentacion"] = "pack"
-    df.loc[titulo.str.contains(r"\bvol?\s\b",regex=True,na=False),"presentacion"] = "colección"
-    df.loc[titulo.str.contains(r"\btomo?\s\b",regex=True,na=False),"presentacion"] = "colección"
-
+def crear_portada(df:pd.DataFrame):
     # URL imagen
     ean = df["ean"].astype(str)
     df["img"] = (
@@ -297,19 +244,31 @@ def crear_columnas(df, ilustraciones, escolares):
 
     return df
 
-# Reunir tipo de aparato crítico
-def definir_aparato_critico(df, cols_ap):
-    mask = df[cols_ap].notna().any(axis=1)
 
+def definir_aparato_critico(df, cols_ap):
+
+    def tiene_contenido(valor):
+        if valor is None:
+            return False
+        if isinstance(valor, float) and pd.isna(valor):
+            return False
+        if isinstance(valor, (list, np.ndarray)) and len(valor) == 0:
+            return False
+        return True
+
+    # Creamos la máscara booleana
+    mask = df[cols_ap].map(tiene_contenido).any(axis=1)
     df["aparato_critico"] = mask
 
-    df["tipo_aparato_critico"] = df[cols_ap].apply(lambda fila: [col for col in cols_ap if pd.notna(fila[col])],axis=1)
+    # Generamos los valores directamente en el apply sin necesidad de .loc
+    def extraer_tipos(fila):
+        presentes = [col for col in cols_ap if tiene_contenido(fila[col])]
+        return presentes if presentes else np.nan
 
-    df.loc[~mask, "tipo_aparato_critico"] = np.nan
+    df["tipo_aparato_critico"] = df[cols_ap].apply(extraer_tipos, axis=1)
 
     return df
 
-# Imputación de columnas en base a otras
 def rellenar_columnas(df):
 
     df = df.copy()
@@ -326,7 +285,7 @@ def rellenar_columnas(df):
     df["grueso"] = df["grueso"].fillna(df["n_paginas"] * 0.04)
 
     # Peso (fórmula estándar)
-    peso_estimado = df['peso'].fillna(df["alto_mm"] * df["ancho_mm"] * df["n_paginas"] * 0.08 + 120)
+    peso_estimado = df['peso'].fillna((df["alto_mm"]/1000) * (df["ancho_mm"]/1000) * (df["n_paginas"]/2) * 80 + 120)
 
     df["peso"] = df["peso"].fillna(peso_estimado)
 
@@ -355,6 +314,25 @@ def rellenar_columnas(df):
     return df
 
 
+# inferencia categorías
+def inferencia_categoria(df, categorias=SUBCATEGORIAS):
+
+    def obtener_categorias(subcategorias_libro):
+        if not isinstance(subcategorias_libro, (list, tuple, set)):
+            return []
+
+        return list({
+            categoria
+            for subcategoria in subcategorias_libro
+            for categoria, subcategorias in categorias.items()
+            if subcategoria in subcategorias
+        })
+
+    df["categorias"] = df["subcategorias"].apply(obtener_categorias)
+
+    return df
+
+
 # =============================================================================
 # LIMPIEZA FINAL
 # =============================================================================
@@ -365,56 +343,22 @@ def limpiar_columnas(df, cols_borrar):
 
     return df.drop(columns=borrar)
 
+
 # =============================================================================
 # PIPELINE
 # =============================================================================
 
-def limpiar_df_completa(data, dict_editoriales=None, dict_encuadernacion=None):
+def limpiar_df_completa(data, dict_editoriales=EDITORIALES, dict_encuadernacion=ENCUADERNACION):
 
-    TRADUCTOR_EDITOR = [
-        "traduccion",
-        "edicion_literaria",
-        "edicion",
-        "direccion_de_edicion",
-        "edicion_y_traduccion",
-    ]
+    df = data.copy()
+    TTL_A_ED = {
+        nombre_ttl: editorial
+        for editorial, datos in dict_editoriales.items()
+        for nombre_ttl in datos["ttl"]
+    }
 
-    OTROS_CONTRIBUIDORES = [
-        "epilogo",
-        "prologo",
-        "trabajo_preliminar",
-        "contribucion",
-        "introduccion",
-        "comentarios_a_la_traduccion",
-        "introduccion_a_notas",
-        "prefacio",
-        "notas",
-        "compilacion",
-    ]
-
-    ILUSTRACIONES = [
-        "ilustracion",
-        "ilustracion_fotografica",
-        "fotografia",
-    ]
-
-    ESCOLARES = [
-        "material_enseñanza",
-        "tipo_material_enseñanza",
-        "tipo_enseñanza",
-        "asignatura",
-        "ciclo",
-    ]
-
-    CATEGORIAS = [
-        "categorias",
-        "pais_de_publicacion",
-        "asignatura",
-        "tipo_material_enseñanza",
-        "ciclo",
-    ]
-
-    COLUMNAS_LISTA = list(set(
+    # Cambio de nombres de columnas
+    columnas_lista = list(set(
         TRADUCTOR_EDITOR
         + OTROS_CONTRIBUIDORES
         + ILUSTRACIONES
@@ -422,51 +366,11 @@ def limpiar_df_completa(data, dict_editoriales=None, dict_encuadernacion=None):
         + CATEGORIAS
         + ["autoria"]
     ))
-
-    COLUMNAS_FINALES = [
-        "isbn",
-        "ean",
-        "titulo",
-        "editorial",
-        "id_editorial",
-        "coleccion",
-        "autoria",
-        "traductor_y_editor",
-        "otros_contribuidores",
-        "subcategorias",
-        "idioma_original",
-        "idioma_de_publicacion",
-        "fecha_publicacion",
-        "n_paginas",
-        "precio",
-        "alto_mm",
-        "ancho_mm",
-        "grueso",
-        "peso",
-        "encuadernacion",
-        "tipo_edicion",
-        "presentacion",
-        "es_ilustrado",
-        "score_colaboradores",
-        "colaboradores_destacados",
-        "sinopsis",
-        "url",
-        "img",
-    ]
-
-    borrar = (
-            TRADUCTOR_EDITOR
-            + OTROS_CONTRIBUIDORES
-            + ILUSTRACIONES
-        )
-
-    df = data.copy()
-
-    # Normalización
-    df = normalizar_columnas_lista(df, COLUMNAS_LISTA)
+    df = normalizar_columnas_lista(df, columnas_lista)
 
     # Limpieza
-    df = limpieza_basica(df, dict_editoriales, dict_encuadernacion)
+    df = limpieza_basica(df, TTL_A_ED, dict_encuadernacion)
+    df['titulo'] = df['titulo'].apply(normalizar_titulos)
 
     # Merge colaboradores
     df = merge_columnas(df, "traductor_y_editor", TRADUCTOR_EDITOR)
@@ -474,20 +378,51 @@ def limpiar_df_completa(data, dict_editoriales=None, dict_encuadernacion=None):
     df = merge_columnas(df, "subcategorias", CATEGORIAS)
 
     # Feature engineering
-    df = contador_nombres(df)
     df = extraer_numeros(df)
-    df = crear_columnas(df, ILUSTRACIONES, ESCOLARES)
     df = definir_aparato_critico(df, OTROS_CONTRIBUIDORES)
+    df = crear_marcadores(df, ESCOLARES, ILUSTRACIONES)
+    df = crear_portada(df)
 
     # Relleno
     df = rellenar_columnas(df)
+    df = inferencia_categoria(df)
 
     # Limpieza final
+    borrar = (
+        TRADUCTOR_EDITOR
+        + OTROS_CONTRIBUIDORES
+        + ILUSTRACIONES
+        + ['isbn']
+    )
     df = limpiar_columnas(df, borrar)
 
     df = df[[c for c in COLUMNAS_FINALES if c in df.columns]]
 
-    df.to_parquet("data/silver/catalogo.parquet", engine="pyarrow")
-
     return df
 
+
+def validar_catalogo(df):
+    # EAN únicos
+    if df['ean'].nunique().count() < len(df['ean']):
+        print('Existen números EAN repetidos.') 
+    
+    # sin nulos en columnas obligatorial
+    cols_nulos = ["ean", "titulo", "autoria", "categorias"]
+    for col in cols_nulos:
+        if df[col].isna().sum() > 0:
+            print(f'Existen nulos en la columna {col}.') 
+
+    # fechas válidas
+    formato = '%d/%m/%Y'
+    for fecha in df['fecha_publicacion']:
+        try:
+            fecha_valida = datetime.strptime(fecha, formato)
+            print("Fecha correcta")
+        except ValueError:
+            print("Fecha inválida")
+
+    # dimensiones positivas
+    cols_numericas = ["n_paginas","precio","alto_mm","ancho_mm","grueso","peso"]
+    for col in cols_numericas:
+        if any(x<=0 for x in df[col]):
+            print(f"La columna {col} tiene núemeros no positivos.")

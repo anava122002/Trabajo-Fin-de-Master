@@ -2,15 +2,20 @@ import json
 import pandas as pd 
 import numpy as np 
 from pathlib import Path
-from src.constants import EDITORIALES
+import os
+import json
+
+if os.path.exists("data/json/editoriales.json"):
+    with open("data/json/editoriales.json", "r", encoding="utf-8") as f:
+        dict_editoriales = json.load(f)
 
 SPI_A_ED = {
     nombre_spi: editorial
-    for editorial, datos in EDITORIALES.items()
+    for editorial, datos in dict_editoriales.items()
     for nombre_spi in (
-        datos["spi"]
-        if isinstance(datos["spi"], list)
-        else [datos["spi"]]
+        datos["nombre_spi"]
+        if isinstance(datos["nombre_spi"], list)
+        else [datos["nombre_spi"]]
     )
     if nombre_spi is not None
 }
@@ -43,7 +48,6 @@ def merge_spi(ruta_spi="data/bronze/spi", spi_a_ed = SPI_A_ED):
     df = pd.concat(dfs, axis=1, join="outer").reset_index()
 
     df_selection = df[df['Editorial'].isin(spi_a_ed.values())].copy()
-
     return df_selection
 
 def prestigio_editorial(df):
@@ -89,11 +93,11 @@ def prestigio_editorial(df):
     for col in df_prestigio.columns:
         nuevas_filas[col] = []
 
-    for ed_dict in EDITORIALES.items():
+    for ed_dict in dict_editoriales.items():
         ed = ed_dict[0]
-        spi = ed_dict[1]['spi']
+        spi = ed_dict[1]['nombre_spi']
 
-        if spi is None:
+        if spi is False:
             for col in nuevas_filas.keys():
                 if col == 'editorial':
                     nuevas_filas[col].append(ed)

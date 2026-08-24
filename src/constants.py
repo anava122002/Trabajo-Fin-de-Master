@@ -1110,145 +1110,38 @@ ENCUADERNACION = {
 }
 
 
-EDITORIALES = {
-    "Planeta": {
-        "id": 1,
-        "ttl": [
-            "Editorial Planeta",
-            "Planeta Gastro",
-            "GeoPlaneta",
-            'Crossbooks',
-            'Zenith'
-        ],
-        "spi": "Planeta (Grup 62. Grupo Planeta)"
+# Los pesos de cada arquetipo deben sumar 1.0 para mantener la escala
+PESOS_ARQUETIPO = {
+    # Prioriza aparato crítico (notas, estudios) y la reputación/prestigio académico
+    "estudio_investigacion": {
+        "aparato_critico": 0.35,
+        "prestigio": 0.35,
+        "novedad": 0.15,
+        "economico": 0.05,
+        "formato_premium": 0.10
     },
-    "Espasa": {
-        "id": 2,
-        "ttl": [
-            "Espasa"
-        ],
-        "spi": "Espasa (Grupo Planeta)"
+    # Prioriza la novedad (últimas ediciones/traducciones) y el prestigio general
+    "lectura_general": {
+        "aparato_critico": 0.05,
+        "prestigio": 0.35,
+        "novedad": 0.40,
+        "economico": 0.10,
+        "formato_premium": 0.10
     },
-    "Destino": {
-        "id": 3,
-        "ttl": [
-            "Ediciones Destino",
-            "Destino Infantil & Juvenil"
-        ],
-        "spi": "Destino (Grupo Planeta)"
+    # Prioriza la presencia física (tapa dura, ediciones ilustradas) y el prestigio
+    "coleccion_regalo": {
+        "aparato_critico": 0.10,
+        "prestigio": 0.25,
+        "novedad": 0.10,
+        "economico": 0.00,
+        "formato_premium": 0.55
     },
-    "Alfaguara": {
-        "id": 4,
-        "ttl": [
-            "ALFAGUARA"
-        ],
-        "spi": "Alfaguara"
-    },
-    "Anagrama": {
-        "id": 5,
-        "ttl": [
-            "ANAGRAMA",
-            "Editorial Anagrama S.A.U."
-        ],
-        "spi": "Anagrama"
-    },
-    "Acantilado": {
-        "id": 6,
-        "ttl": [
-            "Acantilado"
-        ],
-        "spi": "Acantilado"
-    },
-    "Siruela": {
-        "id": 7,
-        "ttl": [
-            "Siruela"
-        ],
-        "spi": "Siruela"
-    },
-    "Ediciones Akal": {
-        "id": 8,
-        "ttl": [
-            "Ediciones Akal"
-        ],
-        "spi": "Akal (Grupo Akal)"
-    },
-    "Gredos": {
-        "id": 9,
-        "ttl": [
-            "Gredos"
-        ],
-        "spi": "Gredos (Grupo RBA)"
-    },
-    "Alianza Editorial": {
-        "id": 10,
-        "ttl": [
-            "Alianza Editorial"
-        ],
-        "spi": [
-            "Alianza (Grupo Anaya, Hachette Livre)",
-            "Alianza (Grupo Anaya / Hachette Livre)"
-        ]
-    },
-    "Ediciones Cátedra": {
-        "id": 11,
-        "ttl": [
-            "Ediciones Cátedra"
-        ],
-        "spi": [
-            "Cátedra (Grupo Anaya, Hachette Livre)",
-            "Cátedra (Grupo Anaya / Hachette Livre)"
-        ]
-    },
-    "RAE": {
-        "id": 12,
-        "ttl": [
-            "RAE"
-        ],
-        "spi": "Real Academia Española (RAE)"
-    },
-    "Castalia Ediciones": {
-        "id": 13,
-        "ttl": [
-            "Castalia Ediciones"
-        ],
-        "spi": "Castalia"
-    },
-    "Booket": {
-        "id": 14,
-        "ttl": [
-            "Booket"
-        ],
-        "spi": None
-    },
-    "Debolsillo": {
-        "id": 15,
-        "ttl": [
-            "DEBOLSILLO"
-        ],
-        "spi": None
-    },
-    "Tusquets": {
-        "id": 16,
-        "ttl": [
-            "Maxi-Tusquets",
-            "Tusquets Editores S.A.",
-            "TUSQUETS"
-        ],
-        "spi": None
-    },
-    "Plaza & Janés": {
-        "id": 17,
-        "ttl": [
-            "PLAZA & JANES"
-        ],
-        "spi": None
-    },
-    "Seix Barral": {
-        "id": 18,
-        "ttl": [
-            "Seix Barral"
-        ],
-        "spi": None
+    # Prioriza ediciones asequibles (precio bajo) y manejables (bolsillo/rústica)
+    "escolar_juvenil": {
+        "aparato_critico": 0.15,
+        "prestigio": 0.20,
+        "novedad": 0.10,
+        "economico": 0.45,
+        "formato_premium": 0.10
     }
 }

@@ -3,7 +3,9 @@ import numpy as np
 from pathlib import Path
 from datetime import datetime
 import re
-from src.constants import TRADUCTOR_EDITOR, OTROS_CONTRIBUIDORES, ILUSTRACIONES, ESCOLARES, CATEGORIAS, COLUMNAS_FINALES, CATEGORIAS, SUBCATEGORIAS, ENCUADERNACION, EDITORIALES, CATEGORIAS_SPI
+import os 
+import json
+from src.constants import TRADUCTOR_EDITOR, OTROS_CONTRIBUIDORES, ILUSTRACIONES, ESCOLARES, CATEGORIAS, COLUMNAS_FINALES, CATEGORIAS, SUBCATEGORIAS, ENCUADERNACION, CATEGORIAS_SPI
 
 # ======================================================================================
 # CREACIÓN DEL DATAFRAME BASE
@@ -348,13 +350,17 @@ def limpiar_columnas(df, cols_borrar):
 # PIPELINE
 # =============================================================================
 
-def limpiar_df_completa(data, dict_editoriales=EDITORIALES, dict_encuadernacion=ENCUADERNACION):
+def limpiar_df_completa(data, ruta_editoriales="data/json/editoriales.json", dict_encuadernacion=ENCUADERNACION):
 
     df = data.copy()
+    if os.path.exists(ruta_editoriales):
+        with open(ruta_editoriales, "r", encoding="utf-8") as f:
+            dict_editoriales = json.load(f)
+
     TTL_A_ED = {
         nombre_ttl: editorial
         for editorial, datos in dict_editoriales.items()
-        for nombre_ttl in datos["ttl"]
+        for nombre_ttl in datos["nombre_ttl"]
     }
 
     # Cambio de nombres de columnas

@@ -602,7 +602,6 @@ SUBCATEGORIAS = {
         'Colombia',
         'Consejos prácticos para viajar: general',
         'Descubrimiento y exploración geográficas',
-        'España',
         'Expediciones: narraciones populares',
         'Guías de viaje y turismo',
         'Guías de viaje: restaurantes, cafeterías y bares',
@@ -716,6 +715,7 @@ SUBCATEGORIAS = {
         'Sagas islandesas y nórdicas antiguas'
     ],
     'Literatura': [
+        "Ficción Clásica: General Y Literaria",
         'Ficción moderna y contemporánea: general y literaria',
         'Biografía: escritores',
         'Ficción humorística',
@@ -774,6 +774,7 @@ SUBCATEGORIAS = {
         'Ficción infantil/juvenil: relatos sobre deportes',
         'Ciencia ficción',
         'Ficción de género',
+        'España',
         'Ficción infantil / Ficción juvenil: ciencia ficción',
         'Ficción de aventuras/acción',
         'Novela histórica alternativa',
@@ -1111,37 +1112,40 @@ ENCUADERNACION = {
 
 
 # Los pesos de cada arquetipo deben sumar 1.0 para mantener la escala
-PESOS_ARQUETIPO = {
-    # Prioriza aparato crítico (notas, estudios) y la reputación/prestigio académico
-    "estudio_investigacion": {
-        "aparato_critico": 0.35,
-        "prestigio": 0.35,
-        "novedad": 0.15,
-        "economico": 0.05,
-        "formato_premium": 0.10
-    },
-    # Prioriza la novedad (últimas ediciones/traducciones) y el prestigio general
-    "lectura_general": {
-        "aparato_critico": 0.05,
-        "prestigio": 0.35,
-        "novedad": 0.40,
-        "economico": 0.10,
-        "formato_premium": 0.10
-    },
-    # Prioriza la presencia física (tapa dura, ediciones ilustradas) y el prestigio
-    "coleccion_regalo": {
-        "aparato_critico": 0.10,
-        "prestigio": 0.25,
-        "novedad": 0.10,
-        "economico": 0.00,
-        "formato_premium": 0.55
-    },
-    # Prioriza ediciones asequibles (precio bajo) y manejables (bolsillo/rústica)
-    "escolar_juvenil": {
-        "aparato_critico": 0.15,
-        "prestigio": 0.20,
-        "novedad": 0.10,
-        "economico": 0.45,
-        "formato_premium": 0.10
-    }
+# src/constants.py
+
+import numpy as np
+
+CRITERIOS = [
+    "indice_portabilidad",
+    "indice_compacidad",
+    "indice_prestancia",
+    "aparato_critico",
+    "prestigio_cat"
+]
+
+# Matrices AHP por pares para cada arquetipo
+MATRICES_ARQUETIPO = {
+    "estudio_investigacion": np.array([
+        [1.0,  1.0, 1/2, 1/5, 1/5],
+        [1.0,  1.0, 1/2, 1/5, 1/5],
+        [2.0,  2.0, 1.0, 1/3, 1/3],
+        [5.0,  5.0, 3.0, 1.0, 1.0],
+        [5.0,  5.0, 3.0, 1.0, 1.0]
+    ]),
+    "lectura_general": np.eye(5),  # Equiprobable (1.0 en diagonal)
+    "coleccion_regalo": np.array([
+        [1.0, 1.0, 1/7, 1/3, 1/5],
+        [1.0, 1.0, 1/7, 1/3, 1/5],
+        [7.0, 7.0, 1.0, 5.0, 3.0],
+        [3.0, 3.0, 1/5, 1.0, 1/3],
+        [5.0, 5.0, 1/3, 3.0, 1.0]
+    ]),
+    "escolar_juvenil": np.array([
+        [1.0, 1.0, 3.0, 3.0, 2.0],
+        [1.0, 1.0, 3.0, 3.0, 2.0],
+        [1/3, 1/3, 1.0, 1.0, 1/2],
+        [1/3, 1/3, 1.0, 1.0, 1/2],
+        [1/2, 1/2, 2.0, 2.0, 1.0]
+    ])
 }

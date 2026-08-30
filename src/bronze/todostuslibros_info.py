@@ -245,10 +245,122 @@ def extraer_datos(url):
 
 
 # ======================================================================================
+# NUEVO SCRAPING
+# ======================================================================================
+
+def buscar_editorial_ii(id_editorial, nombre_editorial, pag_inicio, pag_fin):
+    """
+    Recorre el catálogo de una editorial normal (hasta 200 páginas) iterando de pag_inicio a pag_fin.
+    Devuelve los diccionarios con título, autor, precio y URL de cada libro.
+
+    Parámetros:
+    * **id_editorial:** el id asignado a la editorial
+    * **nombre_editorial:** el nombre de la editorial
+    * **pag_inicio:** página del catálogo web donde empezar a hacer scraping
+    * **pag_final:** última página del catálogo donde hacer scraping
+
+    Outputs: 
+    * Lista de diccionarios con los resultados del scraping
+    """
+    libros = []
+    num_pagina = pag_inicio
+
+    while num_pagina <= pag_fin:
+        url = f"https://www.todostuslibros.com/editoriales/{id_editorial}/catalogo?page={num_pagina}"
+
+        # Mostrar progreso solo hasta la página 10 para no llenar la consola
+        if num_pagina < 10:
+            print(f"Página {num_pagina}...")
+        elif num_pagina == 10:
+            print("Página 10 y más...")
+
+        driver.get(url)
+        time.sleep(1)
+
+        soup = BeautifulSoup(driver.page_source, "html.parser")
+        elementos = soup.find_all("article", class_="book-col")
+
+        for el in elementos:
+            titulo = el.select_one("p.title").get_text(strip=True)
+            autor = el.select_one("p.author").get_text(strip=True)
+            precio = el.select_one("div.prices").get_text(strip=True)
+            url_libro = el.select_one("p.title a")['href']
+        
+
+            libros.append({
+                "editorial": nombre_editorial,
+                "titulo": titulo,
+                "autor": autor,
+                "precio": precio,
+                "url": url_libro,
+            })
+
+        num_pagina += 1
+        time.sleep(0.5)
+
+    return libros
+
+
+# ======================================================================================
+# EDITORIAL GRANDE NUEVO
+# ======================================================================================
+
+def buscar_editorial_grande_ii(id_editorial, nombre_editorial, anio_inicio, anio_fin):
+    """
+    Recorre el catálogo de una editorial grande filtrando por año, lo que permite superar el límite de 200 páginas por búsqueda.
+    Para cada año itera todas las páginas disponibles hasta que no haya resultados.
+    Devuelve los diccionarios con título, autor, precio y URL de cada libro.
+
+    Parámetros:
+    * **id_editorial:** el id asignado a la editorial
+    * **nombre_editorial:** el nombre de la editorial
+    * **anio_inicio:** página (del año) del catálogo web donde empezar a hacer scraping
+    * **anio_final:** última página (del año) del catálogo donde hacer scraping
+
+    Outputs: 
+    * Lista de diccionario con los resultados del scraping
+    """
+    libros = []
+
+    for anio in range(anio_inicio, anio_fin + 1):
+        print(f"Año {anio}...")
+        num_pagina = 1
+
+        while True:
+            url = f"https://www.todostuslibros.com/editoriales/{id_editorial}/catalogo?anios={anio}&page={num_pagina}"
+            driver.get(url)
+            time.sleep(1)
+
+            soup = BeautifulSoup(driver.page_source, "html.parser")
+            elementos = soup.find_all("article", class_="book-col")
+    
+            for el in elementos:
+                titulo = el.select_one("p.title").get_text(strip=True)
+                autor = el.select_one("p.author").get_text(strip=True)
+                precio = el.select_one("div.prices").get_text(strip=True)
+                url_libro = el.select_one("p.title a")['href']
+        
+    
+                libros.append({
+                    "editorial": nombre_editorial,
+                    "titulo": titulo,
+                    "autor": autor,
+                    "precio": precio,
+                    "url": url_libro,
+                })
+
+            num_pagina += 1
+            time.sleep(0.5)
+
+    return libros
+
+
+
+# ======================================================================================
 # SCRAPING COMPLETO DE UNA EDITORIAL (búsqueda + fichas + guardado CSV)
 # ======================================================================================
 
-def scrapear_editorial(id_editorial, nombre_editorial, inicio, fin, es_grande):
+def scrapear_editorial(id_editorial, nombre_editorial, inicio, fin, es_grande, nuevo_codigo=True):
     """
     Orquesta el proceso completo para una editorial:
     1. Busca todos los libros del catálogo en el intervalo indicado.
@@ -272,9 +384,15 @@ def scrapear_editorial(id_editorial, nombre_editorial, inicio, fin, es_grande):
     # Fase 1: recoger listado de libros
     print("Leyendo catálogo...")
     if es_grande:
-        libros = buscar_editorial_grande(id_editorial, nombre_editorial, inicio, fin)
+        if nuevo_codigo:
+            libros = buscar_editorial_grande_ii(id_editorial, nombre_editorial, inicio, fin)
+        else:
+            libros = buscar_editorial_grande(id_editorial, nombre_editorial, inicio, fin)
     else:
-        libros = buscar_editorial(id_editorial, nombre_editorial, inicio, fin)
+        if nuevo_codigo:
+            libros = buscar_editorial_ii(id_editorial, nombre_editorial, inicio, fin)
+        else:
+            libros = buscar_editorial(id_editorial, nombre_editorial, inicio, fin)
 
     print(f"✓ {len(libros)} libros encontrados.")
 

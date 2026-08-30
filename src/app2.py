@@ -1,4 +1,6 @@
 import streamlit as st
+from langchain_core.messages import HumanMessage, AIMessage
+from agente import agente_app
 
 # ======================================================================================
 # CONFIGURACIÓN Y CSS
@@ -202,14 +204,62 @@ if "indice_carrusel" not in st.session_state:
 # DATOS Y FUNCIONES PLACEHOLDER
 # ======================================================================================
 
-LIBROS_EJEMPLO = [
-    {"titulo": "La Ilíada", "autor": "Homero", "editorial": "Cátedra", "año": "2013", "formato": "Rústica"},
-    {"titulo": "La Ilíada", "autor": "Homero", "editorial": "Gredos", "año": "2010", "formato": "Cartoné"},
-    {"titulo": "La Ilíada", "autor": "Homero", "editorial": "Alianza", "año": "2019", "formato": "Rústica"},
-]
+def responder(mensaje_usuario: str) -> dict:
+    """Invoca al agente LangGraph pasando el historial actual de preguntas
 
-def responder(mensaje_usuario: str) -> str:
-    return f"Procesando tu solicitud sobre: '{mensaje_usuario}'. ¿Alguna preferencia de formato?"
+    y devuelve el nuevo estado con las respuestas y el ranking si existe.
+    """
+    # 1. Recuperamos el historial de mensajes formateado para LangChain
+    historial_langchain = [
+        HumanMessage(content=msg["contenido"])
+        if msg["rol"] == "usuario"
+        else AIMessage(content=msg["contenido"])
+        for msg in st.session_state.mensajes
+    ]
+
+    # 2. Preparamos el estado inicial para la invocación
+    estado_input = {"preguntas": historial_langchain}
+
+    # 3. Invocamos el grafo
+    resultado_estado = agente_app.invoke(estado_input)
+
+    return resultado_estado
+
+
+def procesar_mensaje_usuario(texto_usuario: str):
+    """Recoge el mensaje del usuario, invoca al agente y actualiza
+
+    los mensajes y los resultados en el session_state.
+    """
+    if not texto_usuario.strip():
+        return
+
+    # 1. Guardar mensaje del usuario en la sesión
+    st.session_state.mensajes.append(
+        {"rol": "usuario", "contenido": texto_usuario}
+    )
+
+    # 2. Ejecutar agente
+    estado_final = responder(texto_usuario)
+
+    # 3. Extraer la respuesta conversacional del agente
+    if "respuesta_final" in estado_final and estado_final["respuesta_final"]:
+        texto_agente = estado_final["respuesta_final"]
+    else:
+        # Si aún está en fase recolectora, obtenemos la última pregunta generada
+        texto_agente = estado_final["preguntas"][-1].content
+
+    # 4. Guardar respuesta del asistente en el historial
+    st.session_state.mensajes.append(
+        {"rol": "asistente", "contenido": texto_agente}
+    )
+
+    # 5. Si el modelo TOPSIS se ejecutó, actualizar las ediciones en la columna derecha
+    if "top_libros" in estado_final and estado_final["top_libros"]:
+        st.session_state.resultados = estado_final["top_libros"]
+        st.session_state.indice_carrusel = 0
+
+    st.rerun()
 
 
 # ======================================================================================
@@ -233,6 +283,8 @@ col_chat, col_divider, col_resultados = st.columns([1, 0.05, 0.45])
 
 # ── PANEL IZQUIERDO: CHAT ──────────────────────────────────────────────────────────────
 
+# ── PANEL IZQUIERDO: CHAT ──────────────────────────────────────────────────────────────
+
 with col_chat:
     # 1. Contenedor del historial
     html_chat = '<div class="chat-messages">'
@@ -253,19 +305,14 @@ with col_chat:
                 html_chat += f'<div class="msg-user">{msg["contenido"]}</div>'
             else:
                 html_chat += f'<div class="msg-assistant">{msg["contenido"]}</div>'
-    html_chat += '</div>'
-    
+    html_chat += "</div>"
+
     st.markdown(html_chat, unsafe_allow_html=True)
 
-    # 2. Input nativo de Streamlit (funciona siempre)
-    texto = st.chat_input("Respuesta...")
+    # 2. Input nativo con captura de eventos
+    texto = st.chat_input("Escribe aquí tu consulta...")
     if texto:
-        st.session_state.mensajes.append({"rol": "usuario", "contenido": texto})
-        respuesta = responder(texto)
-        st.session_state.mensajes.append({"rol": "asistente", "contenido": respuesta})
-        st.session_state.resultados = LIBROS_EJEMPLO
-        st.session_state.indice_carrusel = 0
-        st.rerun()
+        procesar_mensaje_usuario(texto)
 
 
 # ── DIVISOR ────────────────────────────────────────────────────────────────────────────

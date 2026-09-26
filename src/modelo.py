@@ -212,8 +212,11 @@ def recomendar_ediciones(
     perfil = info_usuario["perfil"]
     df_ranking_final = aplicar_bonificaciones_usuario(df_ranking, perfil['flags_adicionales'])
 
-    return df_ranking_final, pesos_dict, cr
+    df_top = (
+        df_ranking.sort_values(by="score_topsis", ascending=False)
+        .head(5)
+        .reset_index(drop=True)
+    )
+    return df_top
 
 
-def transformar_ranking(ranking):
-    pass

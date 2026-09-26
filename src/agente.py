@@ -1,38 +1,29 @@
-import os
+import sys
+from typing import TypedDict, Literal, Annotated, List, Optional, Tuple
+from pydantic import BaseModel, Field
 from dotenv import load_dotenv
-from langchain_google_genai import ChatGoogleGenerativeAI
-from langchain_chroma import Chroma
-from langchain_core.messages import SystemMessage, BaseMessage, AIMessage
+
+# Cargar variables de entorno si existen (ej. API Keys)
+load_dotenv()
+
+# Importaciones de LangChain y LangGraph
+from langchain_core.messages import SystemMessage, BaseMessage, AIMessage, HumanMessage
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
-from langchain.tools import tool
 from langgraph.graph import StateGraph, START, END
 from langgraph.graph.message import add_messages
-from typing import TypedDict, Literal, Annotated
-from pydantic import BaseModel, Field
-from typing import List, Optional, Tuple
-from modelo import recomendar_ediciones
 
-
-load_dotenv()
-# API_KEY = os.getenv("GEMINI_API_TOKEN")
-# MODEL = "gemini-2.5-flash-lite"
-
-# llm = ChatGoogleGenerativeAI(
-#     model=MODEL,
-#     temperature=0.7,
-#     google_api_key=API_KEY
-# )
-
+# Cargar el LLM según las librerías usadas en agente.py
 from langchain_ollama import ChatOllama
 llm = ChatOllama(model="qwen2.5:3b", temperature=0.2)
 
+# Importar la función del modelo determinista
+from modelo import recomendar_ediciones
+
+
 # =======================================================================================================
-# NODOS
+# ESTRUCTURAS DE DATOS (PYDANTIC SCHEMAS)
 # =======================================================================================================
 
-# --- Estructura de los datos
-
-# 1. Sub-sección de búsqueda
 class BusquedaFiltros(BaseModel):
     titulo_aprox: Optional[str] = Field(
         default=None, description="Título aproximado o palabras clave del libro"
@@ -48,15 +39,13 @@ class BusquedaFiltros(BaseModel):
     )
 
 
-# 2. Sub-sección de restricciones físicas y económicas
 class RestriccionesFiltros(BaseModel):
     precio: Tuple[float, float] = Field(
-        default=(0.0, 100.0),
+        default=(0.0, 50.0),
         description="Rango de precio [min, max] en euros",
     )
 
 
-# 3. Sub-sección de flags adicionales
 class FlagsAdicionales(BaseModel):
     es_para_regalo: bool = Field(
         default=False, description="Indica si la compra es para regalo"
@@ -75,7 +64,6 @@ class FlagsAdicionales(BaseModel):
     )
 
 
-# 4. Sub-sección de perfil
 class PerfilFiltros(BaseModel):
     arquetipo: str = Field(
         default="lectura_general",
@@ -86,7 +74,6 @@ class PerfilFiltros(BaseModel):
     )
 
 
-# 5. Esquema global completo (info_busqueda)
 class InfoBusqueda(BaseModel):
     busqueda: BusquedaFiltros = Field(default_factory=BusquedaFiltros)
     restricciones: RestriccionesFiltros = Field(
@@ -99,79 +86,115 @@ class InfoBusqueda(BaseModel):
 class EstadoAgente(TypedDict):
     preguntas: Annotated[list[BaseMessage], add_messages]
     info_busqueda: dict  
+    campo_actual: str  # Rastrea qué punto específico se está preguntando
     datos_completos: bool  
     top_libros: list  
     respuesta_final: str
 
-class ExtraerInfoBusqueda(BaseModel):
-    """Estructura de extracción y respuesta para el Subagente Recolector."""
+
+class ExtraerInfoPuntoAPunto(BaseModel):
+    """Estructura para la extracción iterativa y secuencial punto por punto."""
 
     info_busqueda: InfoBusqueda
+    campo_siguiente: str = Field(
+        description=(
+            "Nombre exacto de la clave del diccionario sobre la cual se va a preguntar a continuación, "
+            "o 'FIN' si ya se han preguntado y confirmado todos los puntos uno a uno."
+        )
+    )
     datos_completos: bool = Field(
         description=(
-            "True UNICAMENTE si le has mostrado el resumen al usuario y este ha confirmado "
-            "que los datos son correctos. False si todavía estás indagando o pidiendo confirmación."
+            "True UNICAMENTE si se han preguntado absolutamente TODOS los puntos uno por uno "
+            "y el usuario ha confirmado que toda la información recolectada es correcta. False en caso contrario."
         )
     )
     mensaje_conversacional: str = Field(
         description=(
-            "El mensaje de texto que le dirás al usuario en este turno. Si faltan datos, "
-            "hazle preguntas amables. Si ya tienes bastante info, muestra el resumen de lo "
-            "recopilado y pregúntale si es correcto."
+            "Mensaje directo al usuario realizando la pregunta correspondiente ÚNICAMENTE al campo actual, "
+            "o solicitando confirmación final de todo el resumen si se llegó al final."
         )
     )
 
 
-# --- Nodos
+# =======================================================================================================
+# NODOS Y GRAFO
+# =======================================================================================================
+
+# Secuencia estricta punto por punto para la recolección del diccionario info_busqueda
+ORDEN_PREGUNTAS = [
+    "busqueda.titulo_aprox",
+    "busqueda.autor",
+    "busqueda.categorias",
+    "busqueda.subcategorias",
+    "restricciones.precio",
+    "perfil.arquetipo",
+    "perfil.flags_adicionales.es_para_regalo",
+    "perfil.flags_adicionales.prefiere_ilustrado",
+    "perfil.flags_adicionales.ed_preferida",
+    "perfil.flags_adicionales.col_preferida",
+    "perfil.flags_adicionales.enc_preferida"
+]
+
+
 def nodo_recolector(state: EstadoAgente) -> dict:
-    """Subagente 1: Conversa con el usuario para extraer preferencias y estructurar 'info_busqueda'."""
+    """Subagente 1: Recolecta la información preguntando punto por punto en estricto orden."""
+
+    campo_actual = state.get("campo_actual") or ORDEN_PREGUNTAS[0]
 
     prompt_recolector = ChatPromptTemplate.from_messages(
         [
             (
                 "system",
-                "Eres un bibliotecario experto. Tu objetivo es ayudar al usuario a encontrar la edición perfecta de un libro.\n"
-                "Revisa la conversación y actualiza la información de búsqueda.\n"
-                "Genera siempre un 'mensaje_conversacional' adecuado: responde amable, indaga los datos que falten o "
-                "pide confirmación si ya tienes lo principal.",
+                "Eres un asistente bibliotecario metódico y ordenado.\n"
+                "Tu tarea es rellenar la estructura 'info_busqueda' realizando preguntas **punto por punto**.\n\n"
+                f"El orden estricto de preguntas es:\n{ORDEN_PREGUNTAS}\n\n"
+                f"Actualmente te encuentras indagando el campo: '{campo_actual}'.\n\n"
+                "Instrucciones clave:\n"
+                "1. Extrae la información aportada por el usuario en el historial y actualiza 'info_busqueda'.\n"
+                "2. Formula la pregunta del campo actual de manera clara y amable.\n"
+                "3. Si el usuario responde sobre el campo actual, avanza 'campo_siguiente' al próximo campo del orden estricto.\n"
+                "4. No avances al siguiente punto ni preguntes múltiples temas a la vez; indaga punto por punto.\n"
+                "5. Una vez recorridos todos los puntos, muestra el resumen completo de 'info_busqueda' y pide confirmación final al usuario.\n"
+                "6. Solo marca 'datos_completos' en True cuando se hayan completado todos los campos y el usuario confirme de forma explícita que la información es correcta.",
             ),
             MessagesPlaceholder(variable_name="preguntas"),
         ]
     )
 
     cadena_recolectora = prompt_recolector | llm.with_structured_output(
-        ExtraerInfoBusqueda
+        ExtraerInfoPuntoAPunto
     )
 
-    resultado: ExtraerInfoBusqueda = cadena_recolectora.invoke(
+    resultado: ExtraerInfoPuntoAPunto = cadena_recolectora.invoke(
         {"preguntas": state["preguntas"]}
     )
 
-    dict_busqueda = resultado.info_busqueda.model_dump()
-
-    # Creamos la respuesta que generó la IA para el usuario
     mensaje_ia = AIMessage(content=resultado.mensaje_conversacional)
 
     return {
-        "info_busqueda": dict_busqueda,
+        "info_busqueda": resultado.info_busqueda.model_dump(),
+        "campo_actual": resultado.campo_siguiente,
         "datos_completos": resultado.datos_completos,
-        # Al pasar mensaje_ia en 'preguntas', LangGraph (vía add_messages) lo añade al historial
         "preguntas": [mensaje_ia],
     }
 
 
 def nodo_modelo(state: EstadoAgente) -> dict:
-    """Nodo determinista: Ejecuta el pipeline TOPSIS-AHP."""
+    """Nodo determinista: Ejecuta la función recomendar_ediciones()."""
     
     criterios = state["info_busqueda"]
-
-    top_libros = recomendar_ediciones(criterios).to_dict(orient="records")
+    top_libros_df = recomendar_ediciones(criterios)
+    
+    if not top_libros_df.empty:
+        top_libros = top_libros_df.to_dict(orient="records")
+    else:
+        top_libros = []
 
     return {"top_libros": top_libros}
 
 
 def nodo_explicacion(state: EstadoAgente) -> dict:
-    """Subagente 2: Interpreta los resultados del modelo TOPSIS y redacta la justificación para el usuario."""
+    """Subagente 2: Redacta la justificación final recomendando las ediciones obtenidas."""
     top_libros = state["top_libros"]
     criterios_usuario = state["info_busqueda"]
 
@@ -179,8 +202,10 @@ def nodo_explicacion(state: EstadoAgente) -> dict:
         [
             (
                 "system",
-                "Eres un recomendador literario experto. Has recibido una lista de las mejores ediciones calculadas por un sistema multicriterio (TOPSIS). "
-                "Tu tarea es presentar al usuario las opciones y justificar de forma natural y convincente por qué se han escogido esas concretamente para su perfil, destacando los aspectos más relevantes según su arquetipo.",
+                "Eres un recomendador literario experto. Has recibido la lista de las mejores ediciones "
+                "calculadas por un sistema multicriterio (TOPSIS).\n"
+                "Presenta al usuario las opciones obtenidas y justifica de forma natural y clara por qué "
+                "se adaptan a las preferencias solicitadas.",
             ),
             (
                 "human",
@@ -196,26 +221,25 @@ def nodo_explicacion(state: EstadoAgente) -> dict:
         {"criterios": criterios_usuario, "libros": top_libros}
     )
 
-    return {"respuesta_final": respuesta.content} 
+    return {"respuesta_final": respuesta.content}
 
-# --- Transición 
+
+# --- Transición condicional
 def evaluar_completitud(state: EstadoAgente) -> str:
-    """Si 'datos_completos' es True, avanza AUTOMÁTICAMENTE al modelo sin esperar input del usuario."""
     if state.get("datos_completos"):
         return "ejecutar_modelo"
     return END
 
-# --- Construcción grafo
+
+# --- Construcción del grafo de estados
 builder = StateGraph(EstadoAgente)
 
 builder.add_node("recolector", nodo_recolector)
 builder.add_node("ejecutar_modelo", nodo_modelo)
 builder.add_node("explicador", nodo_explicacion)
 
-# Punto de entrada directo al recolector
 builder.set_entry_point("recolector")
 
-# Borde condicional desde el recolector
 builder.add_conditional_edges(
     "recolector",
     evaluar_completitud,
@@ -230,51 +254,76 @@ builder.add_edge("explicador", END)
 
 agente_app = builder.compile()
 
+
 # ======================================================================================
-# BLOQUE DE EJECUCIÓN PRINCIPAL (Para pruebas en consola)
+# BLOQUE DE EJECUCIÓN PRINCIPAL (Consola INTERACTIVA)
 # ======================================================================================
 
 if __name__ == "__main__":
-    from langchain_core.messages import HumanMessage
 
-    print("--- INICIANDO AGENTE RECOMENDADOR LITERARIO ---")
+    # Diccionario inicial especificado en la consulta
+    info_busqueda_inicial = {
+        "busqueda": {
+            "titulo_aprox": None,
+            "autor": "Elvira Sastre",
+            "categorias": ['Literatura'],
+            "subcategorias": []
+        },
+        "restricciones": {
+            "precio": (0.0, 50.0)
+        },
+        "perfil": {
+            "arquetipo": "lectura_general",
+            "flags_adicionales": {
+                "es_para_regalo": False,
+                "prefiere_ilustrado": False,
+                "ed_preferida": None,
+                "col_preferida": None,
+                "enc_preferida": None
+            }
+        }
+    }
+
+    print("--- INICIANDO AGENTE RECOMENDADOR PUNTO POR PUNTO ---")
     print("Escribe 'salir' o 'exit' para terminar.\n")
 
-    # Inicializamos el estado local de prueba
     estado_actual = {
         "preguntas": [],
-        "info_busqueda": {},
+        "info_busqueda": info_busqueda_inicial,
+        "campo_actual": ORDEN_PREGUNTAS[0],
         "datos_completos": False,
         "top_libros": [],
         "respuesta_final": "",
     }
 
+    # Primer mensaje de arranque del agente
+    estado_actual["preguntas"].append(
+        HumanMessage(content="Hola, quisiera buscar una recomendación de libro.")
+    )
+
+    print("[Iniciando conversación...]")
+    estado_actual = agente_app.invoke(estado_actual)
+    
+    ultimo_mensaje = estado_actual["preguntas"][-1]
+    print(f"\nAgente (Recolector) > {ultimo_mensaje.content}")
+
     while True:
-        # 1. Capturar entrada por terminal
         user_input = input("\nUsuario > ")
         if user_input.lower() in ["salir", "exit"]:
             print("¡Hasta luego!")
             break
 
-        # 2. Agregar el mensaje del usuario al historial
         estado_actual["preguntas"].append(HumanMessage(content=user_input))
 
-        # 3. Invocar al agente LangGraph
         print("\n[Pensando...]")
         estado_actual = agente_app.invoke(estado_actual)
 
-        # 4. Mostrar la respuesta según la fase del agente
         if estado_actual.get("respuesta_final"):
-            # Fase final: TOPSIS ejecutado y explicación lista
             print(f"\nAgente (Explicador) > {estado_actual['respuesta_final']}")
-            print("\n--- TOPSIS RESULTADOS ---")
-            print(estado_actual["top_libros"])
+            print("\n--- RECOMENDACIONES TOPSIS CALCULADAS ---")
+            for idx, libro in enumerate(estado_actual["top_libros"], 1):
+                print(f"{idx}. {libro.get('titulo', 'Sin título')} - Editorial: {libro.get('editorial', 'N/A')} - Score: {libro.get('score_topsis', 'N/A')}")
             break
         else:
-            # Fase recolectora: El agente sigue preguntando o confirmando
             ultimo_mensaje = estado_actual["preguntas"][-1]
             print(f"\nAgente (Recolector) > {ultimo_mensaje.content}")
-
-        # [Opcional] Para depurar: muestra el estado del diccionario de búsqueda actual
-        # print(f"\n[DEBUG - info_busqueda]: {estado_actual.get('info_busqueda')}")
-        # print(f"[DEBUG - datos_completos]: {estado_actual.get('datos_completos')}")

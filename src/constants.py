@@ -1133,7 +1133,7 @@ MATRICES_ARQUETIPO = {
         [5.0,  5.0, 3.0, 1.0, 1.0],
         [5.0,  5.0, 3.0, 1.0, 1.0]
     ]),
-    "lectura_general": np.eye(5),  # Equiprobable (1.0 en diagonal)
+    "lectura_general": np.ones((5, 5)),  # Matriz de unos -> Equiprobabilidad real (0.20 cada uno)
     "coleccion_regalo": np.array([
         [1.0, 1.0, 1/7, 1/3, 1/5],
         [1.0, 1.0, 1/7, 1/3, 1/5],
